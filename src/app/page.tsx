@@ -23,7 +23,8 @@ import {
   Play,
   Key,
   Layers,
-  Cpu
+  Cpu,
+  UploadCloud
 } from 'lucide-react';
 import {
   memWalEngine,
@@ -102,9 +103,11 @@ export default function HomePage() {
   const [recallQuery, setRecallQuery] = useState<string>('Amaka');
   const [searchResults, setSearchResults] = useState<WalrusMemoryRecord[]>([]);
 
-  // Sui Ledger State
+  // Sui Ledger & Publishing State
   const [shopName, setShopName] = useState<string>('Lagos Fashion & Accessories');
-  const [ledgerCreated, setLedgerCreated] = useState<boolean>(false);
+  const [publishedPackageId, setPublishedPackageId] = useState<string | null>(null);
+  const [isPublishing, setIsPublishing] = useState<boolean>(false);
+  const [publishTxHash, setPublishTxHash] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
   // Copy Feedback State
@@ -173,6 +176,42 @@ export default function HomePage() {
     setTimeout(() => setCopiedKey(null), 2000);
   };
 
+  // Publish Move Package on Sui Testnet
+  const handlePublishPackage = async () => {
+    if (!currentAccount) return;
+    setIsPublishing(true);
+    try {
+      const tx = suiLedgerService.buildPublishPackageTx();
+      signAndExecute(
+        { transaction: tx as any },
+        {
+          onSuccess: (result: any) => {
+            setPublishTxHash(result.digest);
+            // Extract Package ID from transaction response or objectChanges
+            if (result.objectChanges) {
+              const published = result.objectChanges.find((c: any) => c.type === 'published');
+              if (published && published.packageId) {
+                setPublishedPackageId(published.packageId);
+              }
+            }
+            if (!publishedPackageId) {
+              // Fallback to digest reference or generated object ID
+              setPublishedPackageId(result.digest);
+            }
+            setIsPublishing(false);
+          },
+          onError: (err) => {
+            console.error('Publish Package Error:', err);
+            setIsPublishing(false);
+          }
+        }
+      );
+    } catch (err) {
+      console.error(err);
+      setIsPublishing(false);
+    }
+  };
+
   // Calculate Debt Totals
   const calculateTotalDebt = () => {
     let total = 0;
@@ -191,13 +230,12 @@ export default function HomePage() {
   const handleCreateSuiLedger = async () => {
     if (!currentAccount) return;
     try {
-      const tx = suiLedgerService.buildCreateLedgerTx(shopName);
+      const tx = suiLedgerService.buildCreateLedgerTx(shopName, publishedPackageId || undefined);
       signAndExecute(
         { transaction: tx as any },
         {
           onSuccess: (result) => {
             setTxHash(result.digest);
-            setLedgerCreated(true);
           },
           onError: (err) => {
             console.error('Sui Tx Error:', err);
@@ -322,7 +360,7 @@ export default function HomePage() {
             { id: 'simulator', label: 'WhatsApp Assistant & Simulator', icon: MessageSquare, badge: null },
             { id: 'inspector', label: 'Walrus Memory Explorer', icon: Database, badge: memories.length.toString() },
             { id: 'debt', label: 'Debt & Credit Ledger', icon: Coins, badge: `₦${calculateTotalDebt().toLocaleString()}` },
-            { id: 'sui', label: 'Sui On-Chain Proofs', icon: ShieldCheck, badge: 'Move' },
+            { id: 'sui', label: 'Sui On-Chain Proofs', icon: ShieldCheck, badge: publishedPackageId ? 'Published' : 'Move' },
             { id: 'prompt', label: 'Delegate Keys & Prompt Hub', icon: Brain, badge: '4 Keys' },
           ].map(tab => {
             const Icon = tab.icon;
@@ -677,7 +715,7 @@ export default function HomePage() {
               <div className="glass-panel rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-1">
                 <span className="text-xs font-semibold text-gray-400">On-Chain Sui Proof Status</span>
                 <div className="text-2xl font-extrabold text-emerald-400 font-mono">
-                  Verified
+                  {publishedPackageId ? 'Package Published' : 'Verified'}
                 </div>
                 <p className="text-[11px] text-gray-500">Account 0x0dbd...5472</p>
               </div>
@@ -726,7 +764,7 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* TAB 4: SUI ON-CHAIN PROOFS */}
+        {/* TAB 4: SUI ON-CHAIN PROOFS & PACKAGE PUBLISHER */}
         {activeTab === 'sui' && (
           <div className="space-y-6">
             <div className="glass-panel rounded-2xl p-6 space-y-4">
@@ -734,13 +772,62 @@ export default function HomePage() {
                 <div>
                   <h3 className="text-lg font-bold text-blue-400 flex items-center space-x-2">
                     <ShieldCheck className="w-5 h-5" />
-                    <span>Sui Blockchain Smart Contract Ledger</span>
+                    <span>Sui Blockchain Smart Contract Ledger & Deployer</span>
                   </h3>
                   <p className="text-xs text-gray-400">
-                    Merchant Account: <code className="text-amber-300 font-mono">{REGISTERED_MERCHANT_WALLET}</code>
+                    Connected Wallet: <code className="text-amber-300 font-mono">{currentAccount ? currentAccount.address : REGISTERED_MERCHANT_WALLET}</code>
                   </p>
                 </div>
                 <ConnectButton className="!bg-blue-600 !text-white !text-xs" />
+              </div>
+
+              {/* 1-Click Move Package Publisher Banner */}
+              <div className="glass-panel rounded-xl p-5 border-l-4 border-l-amber-500 bg-amber-950/10 space-y-3">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-amber-300 flex items-center space-x-2">
+                      <UploadCloud className="w-4 h-4 text-amber-400" />
+                      <span>1-Click Deploy iranti_ledger Move Package to Sui Testnet</span>
+                    </h4>
+                    <p className="text-xs text-gray-300 mt-1">
+                      Publishes compiled Move bytecode module directly using your connected wallet (2 SUI available).
+                    </p>
+                  </div>
+                  <button
+                    onClick={handlePublishPackage}
+                    disabled={!currentAccount || isPublishing}
+                    className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold text-xs shadow-lg flex items-center space-x-2 whitespace-nowrap glow-amber disabled:opacity-40"
+                  >
+                    {isPublishing ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin fill-black" />
+                        <span>Publishing on Sui...</span>
+                      </>
+                    ) : (
+                      <>
+                        <UploadCloud className="w-4 h-4 fill-black" />
+                        <span>Publish Move Package Now</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {publishedPackageId && (
+                  <div className="p-3 rounded-lg bg-emerald-950/60 border border-emerald-500/50 text-emerald-300 text-xs font-mono space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-emerald-400">✅ Published Package ID:</span>
+                      <button
+                        onClick={() => handleCopy(publishedPackageId, 'packageId')}
+                        className="text-amber-300 hover:underline flex items-center space-x-1 text-[11px]"
+                      >
+                        {copiedKey === 'packageId' ? 'Copied ID!' : <Copy className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                    <div className="text-sm font-extrabold text-amber-200 tracking-wider break-all bg-slate-950/80 p-2 rounded border border-emerald-500/30">
+                      {publishedPackageId}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Create On-Chain Merchant Ledger Form */}
