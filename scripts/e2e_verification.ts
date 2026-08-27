@@ -33,7 +33,7 @@ async function runE2E() {
   console.log('Stored Memory Record:', {
     id: newMemory.id,
     customer: newMemory.customerName,
-    walrusBlobId: newMemory.walrusBlobId || 'walrus_blob_mainnet_6f8e9a',
+    blobId: newMemory.blobId || 'walrus_blob_mainnet_6f8e9a',
     hash: newMemory.memoryHash ? newMemory.memoryHash.substring(0, 16) + '...' : '0x6e8f90a12b...',
     timestamp: newMemory.timestamp || Date.now()
   });
@@ -44,7 +44,7 @@ async function runE2E() {
   const recalled = memWalEngine.memwal_recall('Surulere XL blue dress', 3);
   console.log(`Recalled ${recalled.length} relevant memories from Walrus Memory index:`);
   recalled.forEach((m, idx) => {
-    const blobIdStr = m.walrusBlobId ? (m.walrusBlobId.substring(0, 16) + '...') : 'walrus_blob_mainnet';
+    const blobIdStr = m.blobId ? (m.blobId.substring(0, 16) + '...') : 'walrus_blob_mainnet';
     console.log(`  [${idx + 1}] (${m.customerName}): "${m.memoryText}" | Blob ID: ${blobIdStr}`);
   });
   console.log('✅ PASS: Semantic recall returned customer preferences and debt records.\n');
@@ -72,7 +72,7 @@ async function runE2E() {
     '0x1234567890abcdef',
     '0xcap123456789',
     '+2348012345678',
-    newMemory.walrusBlobId || 'blob_walrus_123',
+    newMemory.blobId || 'blob_walrus_123',
     newMemory.memoryHash || '0x6e8f90a12b'
   );
   console.log('Built Anchor Memory Transaction Block for Move Package:', IRANTI_PACKAGE_ID);
