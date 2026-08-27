@@ -36,7 +36,7 @@ export class IrantiAgent {
     // Extract key details: size, address, debt records
     let sizePref = '';
     let address = '';
-    let latestDebt: { amount: string; date: string; fullText: string } | null = null;
+    let latestDebt: { amount: number; date: string; fullText: string } | null = null;
     let orderHistory: string[] = [];
 
     for (const mem of customerMems) {
@@ -49,10 +49,10 @@ export class IrantiAgent {
         address = mem.memoryText.replace(`${customerName} (${customerPhone}):`, '').replace('Delivery address specified:', '').trim();
       }
       if (mem.category === 'debt_ledger' || lower.includes('owes') || lower.includes('owing')) {
-        const debtMatch = mem.memoryText.match(/₦?\s*([0-9,]+)/);
-        if (debtMatch && !latestDebt) {
+        const debtVal = memWalEngine.extractDebtAmountFromText(mem.memoryText, mem.customerPhone);
+        if (debtVal > 0 && !latestDebt) {
           latestDebt = {
-            amount: debtMatch[1],
+            amount: debtVal,
             date: mem.createdAt.split('T')[0],
             fullText: mem.memoryText
           };
@@ -66,13 +66,13 @@ export class IrantiAgent {
     // Determine outstanding balance text
     let outstandingBalanceText: string | null = null;
     if (latestDebt) {
-      outstandingBalanceText = `Customer currently owes ₦${latestDebt.amount} (recorded ${latestDebt.date}).`;
+      outstandingBalanceText = `Customer currently owes ₦${latestDebt.amount.toLocaleString()} (recorded ${latestDebt.date}).`;
     }
 
     // Build memory summary
     let memorySummary = `Recalled ${customerMems.length} memories for ${customerName} (${customerPhone}).`;
     if (sizePref) memorySummary += ` Preferred size: ${sizePref}.`;
-    if (latestDebt) memorySummary += ` Outstanding balance: ₦${latestDebt.amount}.`;
+    if (latestDebt) memorySummary += ` Outstanding balance: ₦${latestDebt.amount.toLocaleString()}.`;
 
     // Step 3: Draft culturally natural Lagos vendor WhatsApp reply
     let reply = `Hey ${customerName}! Good to hear from you again. `;
@@ -88,9 +88,9 @@ export class IrantiAgent {
     }
 
     if (latestDebt) {
-      reply += `Also just a quick reminder, dear — you still have a balance of ₦${latestDebt.amount} from last time. Want me to add it to this order so we clear it together? 😊`;
+      reply += `Also just a quick reminder, dear — you still have a balance of ₦${latestDebt.amount.toLocaleString()} from last time. Want me to add it to this order so we clear it together? 😊`;
     } else {
-      reply += `Let me know what you'd like to lock down today so I pack it for you immediately!`;
+      reply += `Let內 know what you'd like to lock down today so I pack it for you immediately!`;
     }
 
     return {
@@ -103,10 +103,11 @@ export class IrantiAgent {
   }
 
   /**
-   * Generates a direct payment reminder for a owing customer
+   * Generates a direct payment reminder for an owing customer
    */
-  public generateDebtReminder(customerName: string, customerPhone: string, amountNaira: string): string {
-    return `Hello ${customerName}! Hope your week is going well. Just following up gently on the balance of ₦${amountNaira} for your previous order. Kindly let me know when you'll be transferring so we update your record. Thank you! 🙏`;
+  public generateDebtReminder(customerName: string, customerPhone: string, amountNaira: string | number): string {
+    const formattedAmount = typeof amountNaira === 'number' ? amountNaira.toLocaleString() : amountNaira;
+    return `Hello ${customerName}! Hope your week is going well. Just following up gently on the balance of ₦${formattedAmount} for your previous order. Kindly let me know when you'll be transferring so we update your record. Thank you! 🙏`;
   }
 }
 
