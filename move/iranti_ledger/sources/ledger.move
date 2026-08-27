@@ -1,8 +1,6 @@
 module iranti_ledger::ledger {
     use std::string::{Self, String};
-    use sui::object::{Self, UID};
-    use sui::tx_context::{Self, TxContext};
-    use sui::transfer;
+    use sui::object::ID;
     use sui::event;
     use sui::table::{Self, Table};
 
@@ -92,7 +90,7 @@ module iranti_ledger::ledger {
     /// Creates a new Merchant Ledger for a seller shop and transfers MerchantCap to caller
     public entry fun create_ledger(shop_name_bytes: vector<u8>, ctx: &mut TxContext) {
         let shop_name = string::utf8(shop_name_bytes);
-        let merchant = tx_context::sender(ctx);
+        let merchant = ctx.sender();
         let ledger_uid = object::new(ctx);
         let ledger_id = object::uid_to_inner(&ledger_uid);
 
@@ -126,9 +124,10 @@ module iranti_ledger::ledger {
         ledger: &mut MerchantLedger,
         name_bytes: vector<u8>,
         phone_bytes: vector<u8>,
-        _ctx: &mut TxContext
+        ctx: &mut TxContext
     ) {
-        assert!(cap.ledger_id == object::id(ledger), ENotOwner);
+        let ledger_id = object::id(ledger);
+        assert!(cap.ledger_id == ledger_id, ENotOwner);
         let phone = string::utf8(phone_bytes);
         assert!(!table::contains(&ledger.customers, phone), ECustomerAlreadyExists);
 
@@ -145,7 +144,7 @@ module iranti_ledger::ledger {
         table::add(&mut ledger.customers, phone, record);
 
         event::emit(CustomerRegisteredEvent {
-            ledger_id: object::id(ledger),
+            ledger_id,
             customer_name: name,
             phone_number: phone,
         });
@@ -162,7 +161,8 @@ module iranti_ledger::ledger {
         timestamp: u64,
         _ctx: &mut TxContext
     ) {
-        assert!(cap.ledger_id == object::id(ledger), ENotOwner);
+        let ledger_id = object::id(ledger);
+        assert!(cap.ledger_id == ledger_id, ENotOwner);
         let phone = string::utf8(phone_bytes);
         assert!(table::contains(&ledger.customers, phone), ECustomerNotFound);
 
@@ -172,15 +172,18 @@ module iranti_ledger::ledger {
         record.last_updated_timestamp = timestamp;
         record.walrus_blob_id = string::utf8(walrus_blob_bytes);
 
+        let new_customer_debt = record.outstanding_kobo;
+        let blob_id = record.walrus_blob_id;
+
         ledger.total_uncollected_kobo = ledger.total_uncollected_kobo + debt_kobo;
         ledger.anchored_memories_count = ledger.anchored_memories_count + 1;
 
         event::emit(DebtUpdatedEvent {
-            ledger_id: object::id(ledger),
+            ledger_id,
             customer_phone: phone,
-            new_debt_kobo: record.outstanding_kobo,
+            new_debt_kobo: new_customer_debt,
             total_uncollected_kobo: ledger.total_uncollected_kobo,
-            walrus_blob_id: record.walrus_blob_id,
+            walrus_blob_id: blob_id,
         });
     }
 
@@ -194,7 +197,8 @@ module iranti_ledger::ledger {
         timestamp: u64,
         ctx: &mut TxContext
     ) {
-        assert!(cap.ledger_id == object::id(ledger), ENotOwner);
+        let ledger_id = object::id(ledger);
+        assert!(cap.ledger_id == ledger_id, ENotOwner);
         let phone = string::utf8(phone_bytes);
         assert!(table::contains(&ledger.customers, phone), ECustomerNotFound);
         assert!(amount_paid_kobo > 0, EInvalidAmount);
@@ -211,15 +215,17 @@ module iranti_ledger::ledger {
         let blob_id = string::utf8(walrus_blob_bytes);
         record.walrus_blob_id = blob_id;
 
+        let remaining_debt = record.outstanding_kobo;
+
         if (actual_deduction <= ledger.total_uncollected_kobo) {
             ledger.total_uncollected_kobo = ledger.total_uncollected_kobo - actual_deduction;
         };
 
         event::emit(DebtSettledEvent {
-            ledger_id: object::id(ledger),
+            ledger_id,
             customer_phone: phone,
             amount_paid_kobo: actual_deduction,
-            remaining_debt_kobo: record.outstanding_kobo,
+            remaining_debt_kobo: remaining_debt,
             walrus_blob_id: blob_id,
         });
 
@@ -228,12 +234,12 @@ module iranti_ledger::ledger {
             merchant: ledger.merchant,
             customer_phone: phone,
             amount_settled_kobo: actual_deduction,
-            remaining_debt_kobo: record.outstanding_kobo,
+            remaining_debt_kobo: remaining_debt,
             walrus_blob_id: blob_id,
             timestamp,
         };
 
-        transfer::transfer(receipt, tx_context::sender(ctx));
+        transfer::transfer(receipt, ctx.sender());
     }
 
     /// Anchors a Walrus Memory blob ID and hash on-chain for verification
@@ -246,7 +252,8 @@ module iranti_ledger::ledger {
         timestamp: u64,
         _ctx: &mut TxContext
     ) {
-        assert!(cap.ledger_id == object::id(ledger), ENotOwner);
+        let ledger_id = object::id(ledger);
+        assert!(cap.ledger_id == ledger_id, ENotOwner);
         let phone = string::utf8(phone_bytes);
         let blob_id = string::utf8(walrus_blob_bytes);
         let hash = string::utf8(memory_hash_bytes);
@@ -260,7 +267,7 @@ module iranti_ledger::ledger {
         ledger.anchored_memories_count = ledger.anchored_memories_count + 1;
 
         event::emit(WalrusMemoryAnchoredEvent {
-            ledger_id: object::id(ledger),
+            ledger_id,
             customer_phone: phone,
             walrus_blob_id: blob_id,
             memory_hash: hash,
