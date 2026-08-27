@@ -183,13 +183,7 @@ export default function HomePage() {
     try {
       const tx = suiLedgerService.buildPublishPackageTx();
       signAndExecute(
-        {
-          transaction: tx as any,
-          options: {
-            showObjectChanges: true,
-            showEffects: true,
-          }
-        },
+        { transaction: tx as any },
         {
           onSuccess: (result: any) => {
             setPublishTxHash(result.digest);
