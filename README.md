@@ -4,6 +4,22 @@
 
 ---
 
+## 🔑 Registered Merchant Account & Delegate Keys
+
+Registered Sui Merchant Account:
+`0x0dbd1d28e57b8cd56478b5ba4a99528f4b6fd84aeb013ca70f4ac503d81d5472`
+
+Ìrántí utilizes **4 Walrus Memory Delegate Keys** registered under the merchant account at [memory.walrus.xyz/dashboard](https://memory.walrus.xyz/dashboard) to authorize gas-free multi-agent memory operations:
+
+| Delegate Key Role | Public Key | Purpose in Ìrántí System |
+|---|---|---|
+| **Web App Key** 🌐 | `e994780ee7acb4f10bf42ddbd6a14400a0e371d9c92a1c344db7acb0e027c351` | Primary key for dApp interactive customer chat, memory recall, and customer reply generation |
+| **Noter Agent 1** 🎙️ | `81904fe13f3ab7a89d5b84e3d45ab8784d17e30a6df48cce5f04e8211d3d545d` | Automated note-taking agent for parsing WhatsApp transcripts & voice note facts (sizes, addresses) |
+| **Noter Agent 2** 🎙️ | `9104ac7519a1c206dc4e802f33f18e1fa97db88008fdd85cc1109b39a200157f` | Secondary backup note-taking delegate key |
+| **Researcher Agent** 📊 | `9b62efa4140cc53d9ed90e605379840c64fdb8cc4e35d42241a293363629d734` | Deep analytical agent key for customer debt ledger updates, risk auditing & purchasing trends |
+
+---
+
 ## 🌟 Overview & Problem Solved
 
 Most small sellers in Lagos — fashion vendors, phone accessory dealers, cosmetics Hustlers, okrika thrift dealers — run their entire business through WhatsApp DMs. A single vendor juggles hundreds of customer threads every day.
@@ -40,9 +56,9 @@ This causes continuous revenue leakages:
         |   Walrus Memory (MemWal)    |     |    Sui Move Smart Contract  |
         |  Mainnet Relayer / Engine   |     |    (move/iranti_ledger)     |
         |                             |     |                             |
-        | - memwal_remember           |     | - MerchantLedger object     |
-        | - memwal_recall (semantic)  |     | - CustomerRecord table      |
-        | - memwal_analyze            |     | - SettlementReceipt proof   |
+        | - Web App Delegate Key      |     | - MerchantLedger object     |
+        | - Noter Voice Agent Key     |     | - CustomerRecord table      |
+        | - Researcher Analytical Key |     | - SettlementReceipt proof   |
         | - Identity Anchor Tagging   |     | - Move unit tests (Passed)  |
         +-----------------------------+     +-----------------------------+
 ```
@@ -77,29 +93,11 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000) in your browser to launch the Ìrántí Workbench:
 - **WhatsApp Assistant & Simulator**: Test live customer interactions with presets (Amaka, Chidi, Folake) or paste custom transcripts.
+- **Delegate Keys Control Bar**: Switch between `Web App`, `Noter`, and `Researcher` delegate keys in real-time.
 - **Walrus Memory Explorer**: Query stored memory blobs via semantic `memwal_recall`.
 - **Debt & Credit Ledger**: Track uncollected revenue in Naira (₦) and generate 1-click WhatsApp payment reminders.
 - **Sui On-Chain Proofs**: Connect Sui Wallet (`@mysten/dapp-kit`) and create on-chain merchant ledgers.
-- **System Prompt Hub**: Copy-paste the production System Prompt into Claude or custom connectors.
-
----
-
-## 🧠 Setup Walrus Memory in Claude (Custom Connector)
-
-Targets **Mainnet/Production** (`https://relayer.memory.walrus.xyz`):
-
-1. Open Claude (Web or Desktop) → **Settings** → **Connectors** → **Add custom connector**.
-2. Paste URL: `https://relayer.memory.walrus.xyz/api/mcp`
-3. Connect a Sui Wallet on the consent screen and approve (sponsored, gas-free transaction).
-4. Verify by asking Claude: *"What MCP tools do you have?"* — confirm `memwal_remember`, `memwal_recall`, `memwal_analyze`, `memwal_restore` are present.
-5. Paste the system prompt from `Iranti-Walrus-Memory-Submission.md` into Claude Project custom instructions.
-
----
-
-## 🎥 2-Minute Demo Script
-
-1. **Session 1 (Monday)**: Select customer **Amaka** (`+2348012345678`), order size 42 slide for ₦7,000 with ₦3,500 deposit. Run Ìrántí Agent to analyze and store memories in Walrus Memory.
-2. **Session 2 (Next Week)**: Reset context, enter *"Amaka is messaging me again, what should I say?"*. Show Ìrántí executing `memwal_recall` and returning size preference, order history, and the ₦3,500 debt unprompted.
+- **System Prompt & Delegate Keys Hub**: Access all 4 registered public keys and prompt copy buttons.
 
 ---
 
