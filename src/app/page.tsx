@@ -175,7 +175,7 @@ export default function HomePage() {
     try {
       const tx = suiLedgerService.buildCreateLedgerTx(shopName);
       signAndExecute(
-        { transaction: tx },
+        { transaction: tx as any },
         {
           onSuccess: (result) => {
             setTxHash(result.digest);
