@@ -20,9 +20,18 @@ import {
   TrendingDown,
   ExternalLink,
   ChevronRight,
-  Play
+  Play,
+  Key,
+  Layers,
+  Cpu
 } from 'lucide-react';
-import { memWalEngine, WalrusMemoryRecord } from '@/lib/memwal';
+import {
+  memWalEngine,
+  WalrusMemoryRecord,
+  WALRUS_DELEGATE_KEYS,
+  REGISTERED_MERCHANT_WALLET,
+  DelegateKeyConfig
+} from '@/lib/memwal';
 import { irantiAgent, IrantiAgentResponse } from '@/lib/iranti_agent';
 import { suiLedgerService } from '@/lib/sui_client';
 
@@ -78,6 +87,10 @@ export default function HomePage() {
   // Active tab state
   const [activeTab, setActiveTab] = useState<'simulator' | 'inspector' | 'debt' | 'sui' | 'prompt'>('simulator');
 
+  // Active Delegate Key
+  const [activeKeyId, setActiveKeyId] = useState<string>('webApp');
+  const activeDelegateKey = WALRUS_DELEGATE_KEYS[activeKeyId] || WALRUS_DELEGATE_KEYS.webApp;
+
   // Customer Chat State
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerPreset>(PRESET_CUSTOMERS[0]);
   const [transcriptInput, setTranscriptInput] = useState<string>('');
@@ -101,6 +114,11 @@ export default function HomePage() {
   useEffect(() => {
     refreshMemories();
   }, []);
+
+  const handleDelegateKeySwitch = (keyId: string) => {
+    setActiveKeyId(keyId);
+    memWalEngine.setActiveDelegateKey(keyId);
+  };
 
   const refreshMemories = () => {
     const all = memWalEngine.getAllMemories();
@@ -191,6 +209,12 @@ export default function HomePage() {
     }
   };
 
+  const getDelegateKeyName = (pubkey?: string) => {
+    if (!pubkey) return 'Web App';
+    const found = Object.values(WALRUS_DELEGATE_KEYS).find(k => k.key === pubkey);
+    return found ? found.name : `${pubkey.substring(0, 8)}...`;
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-[#07090e] text-gray-100">
       {/* Top Navigation Header */}
@@ -209,7 +233,7 @@ export default function HomePage() {
               </span>
             </div>
             <p className="text-xs text-gray-400 hidden sm:block">
-              AI Sales Assistant for WhatsApp Sellers in Lagos — Never Forget a Customer or Debt
+              AI Sales Assistant for WhatsApp Sellers in Lagos — Powered by Walrus Mainnet & Registered Delegate Keys
             </p>
           </div>
         </div>
@@ -235,6 +259,62 @@ export default function HomePage() {
         </div>
       </header>
 
+      {/* WALRUS DELEGATE KEYS CONTROL & MERCHANT ACCOUNT BAR */}
+      <div className="bg-[#0f172a]/90 border-b border-gray-800/80 px-4 lg:px-8 py-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 text-xs font-mono">
+        <div className="flex items-center space-x-3 overflow-x-auto">
+          <div className="flex items-center space-x-1.5 text-amber-400 font-semibold whitespace-nowrap">
+            <Key className="w-3.5 h-3.5 text-amber-400" />
+            <span>Registered Account:</span>
+          </div>
+          <a
+            href={`https://suiscan.xyz/mainnet/account/${REGISTERED_MERCHANT_WALLET}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-gray-300 hover:text-amber-300 bg-slate-900 px-2 py-0.5 rounded border border-gray-800 font-mono truncate max-w-[200px] md:max-w-none flex items-center space-x-1"
+          >
+            <span>{REGISTERED_MERCHANT_WALLET}</span>
+            <ExternalLink className="w-3 h-3 text-gray-500" />
+          </a>
+        </div>
+
+        {/* Delegate Key Selector */}
+        <div className="flex items-center space-x-2 overflow-x-auto">
+          <span className="text-gray-400 whitespace-nowrap flex items-center space-x-1">
+            <Cpu className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Active Delegate Key:</span>
+          </span>
+          <div className="flex space-x-1">
+            {Object.values(WALRUS_DELEGATE_KEYS).map(dk => {
+              const isSelected = activeKeyId === dk.id;
+              return (
+                <button
+                  key={dk.id}
+                  onClick={() => handleDelegateKeySwitch(dk.id)}
+                  title={dk.description}
+                  className={`px-2.5 py-1 rounded text-[11px] transition-all whitespace-nowrap flex items-center space-x-1 border ${
+                    isSelected
+                      ? 'bg-amber-500/20 border-amber-500 text-amber-300 font-bold glow-amber'
+                      : 'bg-slate-900 border-gray-800 text-gray-400 hover:text-gray-200'
+                  }`}
+                >
+                  <span>{dk.role === 'Web App' ? '🌐' : dk.role === 'Noter' ? '🎙️' : '📊'}</span>
+                  <span>{dk.name}</span>
+                </button>
+              );
+            })}
+          </div>
+          <a
+            href="https://memory.walrus.xyz/dashboard"
+            target="_blank"
+            rel="noreferrer"
+            className="px-2 py-1 rounded bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-400 text-[10px] flex items-center space-x-1 transition-all whitespace-nowrap"
+          >
+            <span>Walrus Dashboard</span>
+            <ExternalLink className="w-3 h-3" />
+          </a>
+        </div>
+      </div>
+
       {/* Main Tab Navigation */}
       <div className="border-b border-gray-800 bg-[#080c14] px-4 lg:px-8">
         <div className="flex space-x-1 overflow-x-auto py-2">
@@ -243,7 +323,7 @@ export default function HomePage() {
             { id: 'inspector', label: 'Walrus Memory Explorer', icon: Database, badge: memories.length.toString() },
             { id: 'debt', label: 'Debt & Credit Ledger', icon: Coins, badge: `₦${calculateTotalDebt().toLocaleString()}` },
             { id: 'sui', label: 'Sui On-Chain Proofs', icon: ShieldCheck, badge: 'Move' },
-            { id: 'prompt', label: 'System Prompt & Setup', icon: Brain, badge: 'MCP' },
+            { id: 'prompt', label: 'Delegate Keys & Prompt Hub', icon: Brain, badge: '4 Keys' },
           ].map(tab => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -330,6 +410,12 @@ export default function HomePage() {
                   </button>
                 </div>
 
+                {/* Active Delegate Key Header Badge */}
+                <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-[11px] font-mono flex items-center justify-between text-amber-300">
+                  <span>Authorized Key: <strong>{activeDelegateKey.name}</strong></span>
+                  <span className="text-[9px] text-gray-400 truncate max-w-[120px]">{activeDelegateKey.key.substring(0, 10)}...</span>
+                </div>
+
                 {/* Paste Transcript Textarea */}
                 <div className="space-y-1">
                   <label className="text-xs text-gray-400 font-medium">
@@ -376,7 +462,7 @@ export default function HomePage() {
                         <Sparkles className="w-3.5 h-3.5" />
                         <span>Walrus Memory MCP Tools Executed</span>
                       </span>
-                      <span className="text-[10px] font-mono text-emerald-400">Mainnet Synced</span>
+                      <span className="text-[10px] font-mono text-emerald-400">Mainnet Relayer Verified</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5">
                       {agentOutput.rawToolCallsPerformed.map((call, idx) => (
@@ -461,7 +547,7 @@ export default function HomePage() {
                           </div>
                           <p className="font-mono text-gray-200">{mem.memoryText}</p>
                           <div className="flex items-center justify-between text-[10px] text-gray-500 font-mono pt-1">
-                            <span>Blob ID: {mem.blobId}</span>
+                            <span>Key: <strong className="text-amber-400">{getDelegateKeyName(mem.delegateKeyUsed)}</strong></span>
                             <span>{new Date(mem.createdAt).toLocaleDateString()}</span>
                           </div>
                         </div>
@@ -506,7 +592,7 @@ export default function HomePage() {
                     <span>Walrus Memory (MemWal) Inspector</span>
                   </h3>
                   <p className="text-xs text-gray-400">
-                    Direct access to append-only, dated customer memories stored on Walrus decentralized storage.
+                    Direct access to append-only, dated customer memories stored under account <code className="text-amber-300">{REGISTERED_MERCHANT_WALLET.substring(0, 10)}...</code>.
                   </p>
                 </div>
 
@@ -558,7 +644,7 @@ export default function HomePage() {
                   </div>
 
                   <div className="pt-2 border-t border-gray-800/60 flex items-center justify-between text-[10px] text-gray-500 font-mono">
-                    <span className="truncate max-w-[150px]">{mem.blobId}</span>
+                    <span className="text-amber-400/80 font-bold">{getDelegateKeyName(mem.delegateKeyUsed)}</span>
                     <span>{new Date(mem.createdAt).toLocaleDateString()}</span>
                   </div>
                 </div>
@@ -585,7 +671,7 @@ export default function HomePage() {
                 <div className="text-2xl font-extrabold text-red-400 font-mono">
                   {memories.filter(m => m.category === 'debt_ledger').length} Customers
                 </div>
-                <p className="text-[11px] text-gray-500">Tracked in append-only MemWal blobs</p>
+                <p className="text-[11px] text-gray-500">Tracked via Researcher Delegate Key</p>
               </div>
 
               <div className="glass-panel rounded-2xl p-5 border-l-4 border-l-emerald-500 space-y-1">
@@ -593,7 +679,7 @@ export default function HomePage() {
                 <div className="text-2xl font-extrabold text-emerald-400 font-mono">
                   Verified
                 </div>
-                <p className="text-[11px] text-gray-500">Settlement Receipts cryptographic</p>
+                <p className="text-[11px] text-gray-500">Account 0x0dbd...5472</p>
               </div>
             </div>
 
@@ -651,7 +737,7 @@ export default function HomePage() {
                     <span>Sui Blockchain Smart Contract Ledger</span>
                   </h3>
                   <p className="text-xs text-gray-400">
-                    Package <code className="text-amber-400">iranti_ledger</code> compiled and verified with Sui Move 2024.
+                    Merchant Account: <code className="text-amber-300 font-mono">{REGISTERED_MERCHANT_WALLET}</code>
                   </p>
                 </div>
                 <ConnectButton className="!bg-blue-600 !text-white !text-xs" />
@@ -687,9 +773,57 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* TAB 5: SYSTEM PROMPT & SETUP */}
+        {/* TAB 5: DELEGATE KEYS & SYSTEM PROMPT HUB */}
         {activeTab === 'prompt' && (
           <div className="space-y-6 max-w-4xl mx-auto">
+            {/* Registered Delegate Keys Grid */}
+            <div className="glass-panel rounded-2xl p-6 space-y-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-base font-bold text-amber-400 flex items-center space-x-2">
+                    <Key className="w-5 h-5" />
+                    <span>Walrus Memory Registered Delegate Keys</span>
+                  </h3>
+                  <p className="text-xs text-gray-400">
+                    Authorized keys registered under Sui account <code className="text-amber-300">{REGISTERED_MERCHANT_WALLET.substring(0, 12)}...</code>
+                  </p>
+                </div>
+                <a
+                  href="https://memory.walrus.xyz/dashboard"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="px-3 py-1.5 rounded-lg bg-amber-500 text-black font-bold text-xs flex items-center space-x-1"
+                >
+                  <span>Walrus Dashboard</span>
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 font-mono text-xs">
+                {Object.values(WALRUS_DELEGATE_KEYS).map(dk => (
+                  <div key={dk.id} className="glass-card rounded-xl p-3.5 space-y-2 border border-gray-800">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-amber-300">{dk.name}</span>
+                      <span className="px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 text-[10px]">
+                        {dk.role}
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-gray-400">{dk.description}</p>
+                    <div className="flex items-center justify-between bg-slate-950 p-2 rounded border border-gray-800 text-[10px] text-emerald-400">
+                      <span className="truncate max-w-[200px]">{dk.key}</span>
+                      <button
+                        onClick={() => handleCopy(dk.key, dk.id)}
+                        className="text-amber-400 hover:underline text-[10px] flex items-center space-x-1"
+                      >
+                        {copiedKey === dk.id ? 'Copied' : <Copy className="w-3 h-3" />}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Copyable System Prompt */}
             <div className="glass-panel rounded-2xl p-6 space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-amber-400">Copy-Paste System Prompt (Section 5)</h3>
@@ -719,7 +853,7 @@ Call memwal_analyze on the pasted text first. Extract preferences, orders, addre
 
       {/* Footer */}
       <footer className="border-t border-gray-900 bg-[#080c14] px-4 py-4 text-center text-xs text-gray-500 font-mono">
-        Ìrántí — Powered by Walrus Memory (MemWal) Mainnet & Sui Blockchain. Built for Lagos Sellers.
+        Ìrántí — Powered by Walrus Memory (MemWal) Mainnet & Sui Blockchain. Registered Account: {REGISTERED_MERCHANT_WALLET}
       </footer>
     </div>
   );

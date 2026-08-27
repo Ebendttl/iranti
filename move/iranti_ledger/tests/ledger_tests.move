@@ -4,7 +4,7 @@ module iranti_ledger::ledger_tests {
     use sui::test_scenario::{Self as ts};
     use iranti_ledger::ledger::{Self, MerchantLedger, MerchantCap};
 
-    const MERCHANT_ADDR: address = @0xACE;
+    const MERCHANT_ADDR: address = @0x0dbd1d28e57b8cd56478b5ba4a99528f4b6fd84aeb013ca70f4ac503d81d5472;
 
     #[test]
     fun test_create_and_manage_ledger() {
