@@ -2,14 +2,14 @@
 
 import React, { useState } from 'react';
 import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
-import { getFullnodeUrl } from '@mysten/sui/client';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '@mysten/dapp-kit/dist/index.css';
 import './globals.css';
+import { SUI_TESTNET_RPC_URL } from '@/lib/sui_client';
 
 const { networkConfig } = createNetworkConfig({
-  testnet: { url: getFullnodeUrl('testnet') },
-  mainnet: { url: getFullnodeUrl('mainnet') },
+  testnet: { url: SUI_TESTNET_RPC_URL },
+  mainnet: { url: 'https://fullnode.mainnet.sui.io:443' },
 });
 
 export default function RootLayout({
