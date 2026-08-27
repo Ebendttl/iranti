@@ -30,7 +30,13 @@ import {
   FileCode,
   ArrowUpRight,
   Clock,
-  CheckCircle2
+  CheckCircle2,
+  HelpCircle,
+  Info,
+  RotateCcw,
+  Zap,
+  CheckCircle,
+  ArrowRight
 } from 'lucide-react';
 import {
   memWalEngine,
@@ -111,6 +117,8 @@ export default function HomePage() {
   const [txHash, setTxHash] = useState<string | null>(null);
   const [isPublishing, setIsPublishing] = useState<boolean>(false);
   const [showDevDeployModal, setShowDevDeployModal] = useState<boolean>(false);
+  const [showDemoModal, setShowDemoModal] = useState<boolean>(false);
+  const [showGuideModal, setShowGuideModal] = useState<boolean>(false);
 
   // UI state
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
@@ -160,6 +168,7 @@ export default function HomePage() {
 
   const handleRunDemoFlow = async () => {
     setActiveTab('simulator');
+    setShowDemoModal(false);
     const demoCust = PRESET_CUSTOMERS[0];
     setSelectedCustomer(demoCust);
     const demoText = demoCust.sampleChat.join('\n');
@@ -176,6 +185,13 @@ export default function HomePage() {
       refreshMemories();
       setIsProcessing(false);
     }, 600);
+  };
+
+  const handleResetData = () => {
+    memWalEngine.resetToDefault();
+    refreshMemories();
+    setAgentOutput(null);
+    alert('Memory store reset to initial seed state.');
   };
 
   const handleSearchRecall = (e: React.FormEvent) => {
@@ -220,7 +236,6 @@ export default function HomePage() {
     }
   };
 
-  // Developer Privileged Deployment Action (Gated)
   const handleDevPublishPackage = () => {
     if (!currentAccount) {
       alert('Please connect your Sui wallet first.');
@@ -260,14 +275,12 @@ export default function HomePage() {
     }
   };
 
-  // Safe Fintech Ledger Calculations
   const calculateTotalDebt = (): number => {
     const debtMems = memories.filter(m => m.category === 'debt_ledger');
     let total = 0;
     const seenCustomers = new Set<string>();
 
     for (const mem of debtMems) {
-      // Avoid summing multiple historical debt records for the same customer
       const key = `${mem.customerName}_${mem.customerPhone}`;
       if (!seenCustomers.has(key)) {
         seenCustomers.add(key);
@@ -297,8 +310,8 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#07090e] text-gray-100 flex flex-col font-sans selection:bg-amber-500 selection:text-black">
       
       {/* PERSISTENT HEADER */}
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#07090e]/85 border-b border-white/[0.08]">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#07090e]/90 border-b border-white/[0.08]">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           
           {/* Logo & Brand Mark */}
           <div className="flex items-center space-x-3">
@@ -333,17 +346,24 @@ export default function HomePage() {
           </div>
 
           {/* Right Controls */}
-          <div className="hidden md:flex items-center space-x-3">
-            <span className="px-2.5 py-1 rounded-md bg-slate-900 border border-slate-800 text-[11px] font-mono text-amber-300/90 flex items-center space-x-1">
-              <Sparkles className="w-3 h-3 text-amber-400" />
+          <div className="hidden md:flex items-center space-x-2.5">
+            
+            {/* Interactive Demo Mode Pill */}
+            <button
+              onClick={() => setShowDemoModal(true)}
+              className="px-3 py-1.5 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-mono font-semibold flex items-center space-x-1.5 transition-all shadow-sm"
+              title="Click to view Demo Status & Overview"
+            >
+              <Zap className="w-3.5 h-3.5 text-amber-400" />
               <span>Demo Mode</span>
-            </span>
+              <Info className="w-3 h-3 text-amber-400/80" />
+            </button>
 
             <button
               onClick={handleRunDemoFlow}
-              className="px-3.5 py-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-300 font-semibold text-xs transition-all flex items-center space-x-1.5"
+              className="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-extrabold text-xs shadow-md shadow-amber-500/20 transition-all flex items-center space-x-1.5"
             >
-              <Play className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+              <Play className="w-3.5 h-3.5 fill-black text-black" />
               <span>Run 2-Min Demo</span>
             </button>
 
@@ -367,7 +387,15 @@ export default function HomePage() {
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
                 <span>Walrus Mainnet Connected</span>
               </span>
-              <span className="text-amber-400 text-[10px]">Demo Mode</span>
+              <button
+                onClick={() => {
+                  setShowDemoModal(true);
+                  setMobileMenuOpen(false);
+                }}
+                className="text-amber-400 text-[10px] underline"
+              >
+                Demo Mode Info
+              </button>
             </div>
             <button
               onClick={() => {
@@ -386,35 +414,35 @@ export default function HomePage() {
         )}
       </header>
 
-      {/* NAVIGATION TABS BAR */}
-      <nav className="border-b border-white/[0.08] bg-[#0b0f17]/90 backdrop-blur-md sticky top-16 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex space-x-1 overflow-x-auto py-2.5 no-scrollbar scroll-smooth">
+      {/* NAVIGATION TABS BAR — Clean Grid Layout That Fits 100% Neatly Without Cutoff */}
+      <nav className="border-b border-white/[0.08] bg-[#0b0f17]/95 backdrop-blur-md sticky top-16 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-2">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 w-full">
             
             <button
               onClick={() => setActiveTab('simulator')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-2 ${
+              className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-2 ${
                 activeTab === 'simulator'
-                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-bold'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-slate-900/60'
+                  ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-extrabold border border-amber-400'
+                  : 'text-gray-300 hover:text-white bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80'
               }`}
             >
-              <MessageSquare className="w-4 h-4" />
-              <span>WhatsApp Assistant & Simulator</span>
+              <MessageSquare className="w-4 h-4 shrink-0" />
+              <span className="truncate">WhatsApp Simulator</span>
             </button>
 
             <button
               onClick={() => setActiveTab('inspector')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-2 ${
+              className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-1.5 ${
                 activeTab === 'inspector'
-                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-bold'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-slate-900/60'
+                  ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-extrabold border border-amber-400'
+                  : 'text-gray-300 hover:text-white bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80'
               }`}
             >
-              <Database className="w-4 h-4" />
-              <span>Walrus Memory Explorer</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                activeTab === 'inspector' ? 'bg-black/20 text-black' : 'bg-slate-800 text-amber-400'
+              <Database className="w-4 h-4 shrink-0" />
+              <span className="truncate">Walrus Explorer</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono shrink-0 ${
+                activeTab === 'inspector' ? 'bg-black/20 text-black font-bold' : 'bg-slate-800 text-amber-400'
               }`}>
                 {memories.length}
               </span>
@@ -422,33 +450,33 @@ export default function HomePage() {
 
             <button
               onClick={() => setActiveTab('debt')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-2 ${
+              className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-1.5 ${
                 activeTab === 'debt'
-                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-bold'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-slate-900/60'
+                  ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-extrabold border border-amber-400'
+                  : 'text-gray-300 hover:text-white bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80'
               }`}
             >
-              <TrendingDown className="w-4 h-4" />
-              <span>Debt & Credit Ledger</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                activeTab === 'debt' ? 'bg-black/20 text-black' : 'bg-slate-800 text-amber-400'
+              <TrendingDown className="w-4 h-4 shrink-0" />
+              <span className="truncate">Debt Ledger</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono shrink-0 ${
+                activeTab === 'debt' ? 'bg-black/20 text-black font-bold' : 'bg-slate-800 text-amber-400'
               }`}>
-                ₦{calculateTotalDebt().toLocaleString()}
+                ₦{(calculateTotalDebt() / 1000).toFixed(1)}k
               </span>
             </button>
 
             <button
               onClick={() => setActiveTab('sui')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-2 ${
+              className={`px-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-1.5 ${
                 activeTab === 'sui'
-                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-bold'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-slate-900/60'
+                  ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-extrabold border border-amber-400'
+                  : 'text-gray-300 hover:text-white bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80'
               }`}
             >
-              <ShieldCheck className="w-4 h-4" />
-              <span>Sui On-Chain Proofs</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                activeTab === 'sui' ? 'bg-black/20 text-black' : 'bg-slate-800 text-emerald-400'
+              <ShieldCheck className="w-4 h-4 shrink-0" />
+              <span className="truncate">Sui Proofs</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono shrink-0 ${
+                activeTab === 'sui' ? 'bg-black/20 text-black font-bold' : 'bg-slate-800 text-emerald-400'
               }`}>
                 Verified
               </span>
@@ -456,16 +484,16 @@ export default function HomePage() {
 
             <button
               onClick={() => setActiveTab('prompt')}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center space-x-2 ${
+              className={`col-span-2 sm:col-span-1 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all flex items-center justify-center space-x-1.5 ${
                 activeTab === 'prompt'
-                  ? 'bg-amber-500 text-black shadow-md shadow-amber-500/20 font-bold'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-slate-900/60'
+                  ? 'bg-amber-500 text-black shadow-lg shadow-amber-500/20 font-extrabold border border-amber-400'
+                  : 'text-gray-300 hover:text-white bg-slate-900/60 hover:bg-slate-900 border border-slate-800/80'
               }`}
             >
-              <Key className="w-4 h-4" />
-              <span>Delegate Keys & Prompt Hub</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-mono ${
-                activeTab === 'prompt' ? 'bg-black/20 text-black' : 'bg-slate-800 text-amber-400'
+              <Key className="w-4 h-4 shrink-0" />
+              <span className="truncate">Delegate Keys & Prompts</span>
+              <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono shrink-0 ${
+                activeTab === 'prompt' ? 'bg-black/20 text-black font-bold' : 'bg-slate-800 text-amber-400'
               }`}>
                 4 Keys
               </span>
@@ -474,6 +502,56 @@ export default function HomePage() {
           </div>
         </div>
       </nav>
+
+      {/* INTERACTIVE WORKFLOW STEPPER BANNER — Intuitive User Guidance */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+        <div className="glass-panel rounded-2xl p-3.5 border border-white/[0.08] flex flex-col md:flex-row md:items-center justify-between gap-3 bg-slate-900/60">
+          <div className="flex items-center space-x-2">
+            <span className="px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 text-[10px] font-mono font-bold">WORKFLOW</span>
+            <span className="text-xs font-semibold text-gray-200">How Ìrántí Works:</span>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 flex-1 md:max-w-2xl font-mono text-[11px]">
+            <button
+              onClick={() => setActiveTab('simulator')}
+              className={`p-2 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                activeTab === 'simulator' ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-bold' : 'bg-slate-950/60 border-slate-800 text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] text-amber-400 font-bold">1</span>
+              <span className="truncate">Select Customer & Chat</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('inspector')}
+              className={`p-2 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                activeTab === 'inspector' ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-bold' : 'bg-slate-950/60 border-slate-800 text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] text-amber-400 font-bold">2</span>
+              <span className="truncate">Recall MemWal Blobs</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('sui')}
+              className={`p-2 rounded-xl border text-left flex items-center space-x-2 transition-all ${
+                activeTab === 'sui' ? 'bg-amber-500/15 border-amber-500 text-amber-300 font-bold' : 'bg-slate-950/60 border-slate-800 text-gray-400 hover:text-gray-200'
+              }`}
+            >
+              <span className="w-5 h-5 rounded-full bg-amber-500/20 flex items-center justify-center text-[10px] text-amber-400 font-bold">3</span>
+              <span className="truncate">Verify Sui Proofs</span>
+            </button>
+          </div>
+
+          <button
+            onClick={() => setShowGuideModal(true)}
+            className="text-xs text-amber-400 hover:underline flex items-center space-x-1 font-semibold self-end md:self-auto"
+          >
+            <HelpCircle className="w-3.5 h-3.5" />
+            <span>Guide</span>
+          </button>
+        </div>
+      </div>
 
       {/* MAIN BODY CONTENT */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
@@ -1125,7 +1203,7 @@ export default function HomePage() {
               <div className="flex items-center justify-between">
                 <h3 className="text-base font-bold text-amber-400">System Prompt Code Template (Section 5)</h3>
                 <button
-                  onClick={() => handleCopy(`You are Ìrántí, an intelligent AI sales assistant for WhatsApp vendors in Lagos, Nigeria...`, 'prompt')}
+                  onClick={() => handleCopy(`You are Ìrántí (Ìrántí = Memory in Yoruba), an intelligent AI sales assistant for WhatsApp vendors in Lagos, Nigeria...`, 'prompt')}
                   className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center space-x-1.5 transition-all"
                 >
                   <Copy className="w-3.5 h-3.5" />
@@ -1157,6 +1235,105 @@ SYSTEM STATE & TOOL SCHEMAS:
         )}
 
       </main>
+
+      {/* INTERACTIVE DEMO MODE & SYSTEM STATUS MODAL */}
+      {showDemoModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel rounded-2xl p-6 max-w-lg w-full border border-amber-500/40 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+              <h3 className="text-base font-bold text-amber-400 flex items-center space-x-2">
+                <Zap className="w-5 h-5 text-amber-400" />
+                <span>Ìrántí System & Demo Overview</span>
+              </h3>
+              <button onClick={() => setShowDemoModal(false)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs leading-relaxed text-gray-300">
+              <p>
+                <strong className="text-white">Ìrántí</strong> is running in full interactive demonstration mode connected to <strong className="text-emerald-400">Walrus Mainnet Relayer</strong> and <strong className="text-blue-400">Sui Testnet</strong>.
+              </p>
+
+              <div className="p-3 rounded-xl bg-slate-950 border border-gray-800 font-mono text-[11px] space-y-1.5 text-gray-300">
+                <div className="flex justify-between"><span>Merchant Account:</span><code className="text-amber-300">0x0dbd...5472</code></div>
+                <div className="flex justify-between"><span>Walrus Relayer:</span><code className="text-emerald-400">https://relayer.memory.walrus.xyz</code></div>
+                <div className="flex justify-between"><span>Registered Keys:</span><code className="text-amber-400">4 Delegate Keys (Web, Noter 1 & 2, Researcher)</code></div>
+                <div className="flex justify-between"><span>Sui Move Package:</span><code className="text-blue-400">0x8455...46b9</code></div>
+              </div>
+
+              <div className="space-y-2">
+                <h4 className="font-bold text-gray-200">Interactive Controls:</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={handleRunDemoFlow}
+                    className="p-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs flex items-center justify-center space-x-1.5 transition-all"
+                  >
+                    <Play className="w-4 h-4 fill-black" />
+                    <span>Run 2-Min Demo</span>
+                  </button>
+
+                  <button
+                    onClick={handleResetData}
+                    className="p-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-gray-800 text-gray-300 font-bold text-xs flex items-center justify-center space-x-1.5 transition-all"
+                  >
+                    <RotateCcw className="w-4 h-4 text-amber-400" />
+                    <span>Reset Seed Data</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QUICK USER GUIDE MODAL */}
+      {showGuideModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="glass-panel rounded-2xl p-6 max-w-md w-full border border-amber-500/40 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-gray-800 pb-3">
+              <h3 className="text-base font-bold text-amber-400 flex items-center space-x-2">
+                <HelpCircle className="w-5 h-5 text-amber-400" />
+                <span>User Navigation Guide</span>
+              </h3>
+              <button onClick={() => setShowGuideModal(false)} className="text-gray-400 hover:text-white p-1">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs leading-relaxed text-gray-300">
+              <div className="space-y-2 font-mono">
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-gray-800 space-y-1">
+                  <div className="font-bold text-amber-300">1. WhatsApp Simulator</div>
+                  <p className="text-gray-400 text-[11px]">Select Amaka, Chidi, or Folake to simulate incoming WhatsApp messages and trigger AI memory recall.</p>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-gray-800 space-y-1">
+                  <div className="font-bold text-indigo-300">2. Walrus Memory Explorer</div>
+                  <p className="text-gray-400 text-[11px]">Inspect and query memories stored on Walrus Memory relayer by category, phone, or keyword.</p>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-gray-800 space-y-1">
+                  <div className="font-bold text-red-300">3. Debt & Credit Ledger</div>
+                  <p className="text-gray-400 text-[11px]">View outstanding revenue owed across active Lagos customers with 1-click WhatsApp payment reminders.</p>
+                </div>
+
+                <div className="p-2.5 rounded-xl bg-slate-950 border border-gray-800 space-y-1">
+                  <div className="font-bold text-blue-300">4. Sui On-Chain Proofs</div>
+                  <p className="text-gray-400 text-[11px]">Inspect verified cryptographic event proofs anchored on our Sui Move ledger package.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowGuideModal(false)}
+                className="w-full py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-black font-bold text-xs"
+              >
+                Got It!
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* PRIVILEGED DEVELOPER DEPLOYMENT MODAL (GATED) */}
       {showDevDeployModal && (
@@ -1200,6 +1377,16 @@ SYSTEM STATE & TOOL SCHEMAS:
           </div>
         </div>
       )}
+
+      {/* FLOATING QUICK GUIDE HELPER BUTTON */}
+      <button
+        onClick={() => setShowGuideModal(true)}
+        className="fixed bottom-5 right-5 z-40 p-3 rounded-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-black font-bold shadow-2xl shadow-amber-500/40 flex items-center space-x-2 transition-all hover:scale-105 border border-amber-400/40"
+        title="App Guidance & Tour"
+      >
+        <HelpCircle className="w-5 h-5 fill-black text-amber-400" />
+        <span className="text-xs font-bold font-mono pr-1 hidden sm:inline">Guide</span>
+      </button>
 
       {/* FOOTER */}
       <footer className="border-t border-white/[0.08] bg-[#07090e] px-4 py-6 text-center text-xs text-gray-500 font-mono space-y-1">
