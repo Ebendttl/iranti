@@ -1,8 +1,49 @@
 /**
  * Walrus Memory (MemWal) Client & Engine for Ìrántí
  * Supports Mainnet Relayer (https://relayer.memory.walrus.xyz)
- * and Local High-Fidelity Vector-Similarity Engine for offline/demo reliability.
+ * and Registered Delegate Keys for Multi-Agent Authorization.
  */
+
+export const REGISTERED_MERCHANT_WALLET = '0x0dbd1d28e57b8cd56478b5ba4a99528f4b6fd84aeb013ca70f4ac503d81d5472';
+
+export interface DelegateKeyConfig {
+  id: string;
+  name: string;
+  key: string;
+  role: 'Web App' | 'Noter' | 'Researcher';
+  description: string;
+}
+
+export const WALRUS_DELEGATE_KEYS: Record<string, DelegateKeyConfig> = {
+  webApp: {
+    id: 'webApp',
+    name: 'Web App',
+    key: 'e994780ee7acb4f10bf42ddbd6a14400a0e371d9c92a1c344db7acb0e027c351',
+    role: 'Web App',
+    description: 'Primary dApp key for interactive WhatsApp DM memory recall & writing'
+  },
+  noter1: {
+    id: 'noter1',
+    name: 'Noter (Voice Agent)',
+    key: '81904fe13f3ab7a89d5b84e3d45ab8784d17e30a6df48cce5f04e8211d3d545d',
+    role: 'Noter',
+    description: 'Automated note-taking agent for extracting facts from Lagos WhatsApp voice notes'
+  },
+  noter2: {
+    id: 'noter2',
+    name: 'Noter (Backup Agent)',
+    key: '9104ac7519a1c206dc4e802f33f18e1fa97db88008fdd85cc1109b39a200157f',
+    role: 'Noter',
+    description: 'Secondary note-taking delegate key registered under Sui account'
+  },
+  researcher: {
+    id: 'researcher',
+    name: 'Researcher (Insights)',
+    key: '9b62efa4140cc53d9ed90e605379840c64fdb8cc4e35d42241a293363629d734',
+    role: 'Researcher',
+    description: 'Analytical agent key for debt risk auditing, loyalty trends & memory analytics'
+  }
+};
 
 export interface WalrusMemoryRecord {
   id: string;
@@ -13,12 +54,15 @@ export interface WalrusMemoryRecord {
   createdAt: string; // ISO String
   blobId?: string;
   relevanceScore?: number;
+  delegateKeyUsed?: string;
+  merchantWallet?: string;
 }
 
 export interface AnalyzeResult {
   extractedMemories: WalrusMemoryRecord[];
   summary: string;
   detectedDebtKobo?: number;
+  delegateKeyUsed: string;
 }
 
 const WALRUS_MAINNET_RELAYER = 'https://relayer.memory.walrus.xyz';
@@ -33,6 +77,8 @@ const INITIAL_DEMO_MEMORIES: WalrusMemoryRecord[] = [
     memoryText: 'Amaka (+2348012345678): Identity established. VIP customer from Surulere.',
     createdAt: '2026-08-20T10:00:00Z',
     blobId: 'walrus_blob_amaka_id_01',
+    delegateKeyUsed: WALRUS_DELEGATE_KEYS.webApp.key,
+    merchantWallet: REGISTERED_MERCHANT_WALLET
   },
   {
     id: 'mem_amaka_02',
@@ -42,6 +88,8 @@ const INITIAL_DEMO_MEMORIES: WalrusMemoryRecord[] = [
     memoryText: 'Amaka (+2348012345678): Prefers Size 42 slides, blue or royal navy colors only. Dislikes tight fittings.',
     createdAt: '2026-08-20T10:05:00Z',
     blobId: 'walrus_blob_amaka_pref_02',
+    delegateKeyUsed: WALRUS_DELEGATE_KEYS.noter1.key,
+    merchantWallet: REGISTERED_MERCHANT_WALLET
   },
   {
     id: 'mem_amaka_03',
@@ -51,6 +99,8 @@ const INITIAL_DEMO_MEMORIES: WalrusMemoryRecord[] = [
     memoryText: 'Amaka (+2348012345678): Delivery address is 14 Adeniran Ogunsanya St, Surulere, Lagos.',
     createdAt: '2026-08-20T10:10:00Z',
     blobId: 'walrus_blob_amaka_addr_03',
+    delegateKeyUsed: WALRUS_DELEGATE_KEYS.noter1.key,
+    merchantWallet: REGISTERED_MERCHANT_WALLET
   },
   {
     id: 'mem_amaka_04',
@@ -60,6 +110,8 @@ const INITIAL_DEMO_MEMORIES: WalrusMemoryRecord[] = [
     memoryText: 'Amaka (+2348012345678): owes ₦3,500 as of 2026-08-25 (was ₦7,000, paid ₦3,500 deposit for Blue Size-42 slide). Promised to clear remainder next week.',
     createdAt: '2026-08-25T14:30:00Z',
     blobId: 'walrus_blob_amaka_debt_04',
+    delegateKeyUsed: WALRUS_DELEGATE_KEYS.researcher.key,
+    merchantWallet: REGISTERED_MERCHANT_WALLET
   },
   {
     id: 'mem_chidi_01',
@@ -69,6 +121,8 @@ const INITIAL_DEMO_MEMORIES: WalrusMemoryRecord[] = [
     memoryText: 'Chidi (+2348039876543): Wears Large wristwatches, gold finish preferred. Always pays via Instant Bank Transfer.',
     createdAt: '2026-08-22T11:20:00Z',
     blobId: 'walrus_blob_chidi_pref_01',
+    delegateKeyUsed: WALRUS_DELEGATE_KEYS.webApp.key,
+    merchantWallet: REGISTERED_MERCHANT_WALLET
   },
   {
     id: 'mem_folake_01',
@@ -78,14 +132,27 @@ const INITIAL_DEMO_MEMORIES: WalrusMemoryRecord[] = [
     memoryText: 'Folake (+2348051112233): owes ₦12,000 as of 2026-08-26 for 2x Lace Fabrics. Promised payment on end-of-month salary date.',
     createdAt: '2026-08-26T16:45:00Z',
     blobId: 'walrus_blob_folake_debt_01',
+    delegateKeyUsed: WALRUS_DELEGATE_KEYS.researcher.key,
+    merchantWallet: REGISTERED_MERCHANT_WALLET
   }
 ];
 
 export class MemWalEngine {
   private memories: WalrusMemoryRecord[] = [];
+  private activeDelegateKey: DelegateKeyConfig = WALRUS_DELEGATE_KEYS.webApp;
 
   constructor() {
     this.loadState();
+  }
+
+  public setActiveDelegateKey(keyId: string) {
+    if (WALRUS_DELEGATE_KEYS[keyId]) {
+      this.activeDelegateKey = WALRUS_DELEGATE_KEYS[keyId];
+    }
+  }
+
+  public getActiveDelegateKey(): DelegateKeyConfig {
+    return this.activeDelegateKey;
   }
 
   private loadState() {
@@ -116,28 +183,47 @@ export class MemWalEngine {
   }
 
   /**
-   * Health check for MemWal connection
+   * Health check for MemWal connection with Delegate Key header verification
    */
-  public async memwal_health(): Promise<{ status: string; relayer: string; memoryCount: number }> {
+  public async memwal_health(): Promise<{ status: string; relayer: string; memoryCount: number; activeDelegateKey: string; merchantWallet: string }> {
     try {
-      const res = await fetch(`${WALRUS_MAINNET_RELAYER}/health`, { method: 'GET' });
+      const res = await fetch(`${WALRUS_MAINNET_RELAYER}/health`, {
+        method: 'GET',
+        headers: {
+          'X-Walrus-Delegate-Key': this.activeDelegateKey.key,
+          'X-Walrus-Account': REGISTERED_MERCHANT_WALLET
+        }
+      });
       if (res.ok) {
-        return { status: 'ONLINE_MAINNET', relayer: WALRUS_MAINNET_RELAYER, memoryCount: this.memories.length };
+        return {
+          status: 'ONLINE_MAINNET',
+          relayer: WALRUS_MAINNET_RELAYER,
+          memoryCount: this.memories.length,
+          activeDelegateKey: this.activeDelegateKey.key,
+          merchantWallet: REGISTERED_MERCHANT_WALLET
+        };
       }
     } catch {
       // ignore
     }
-    return { status: 'SIMULATED_LOCAL_WALRUS', relayer: 'Local Vector Store', memoryCount: this.memories.length };
+    return {
+      status: 'SIMULATED_LOCAL_WALRUS',
+      relayer: 'Local Vector Store',
+      memoryCount: this.memories.length,
+      activeDelegateKey: this.activeDelegateKey.key,
+      merchantWallet: REGISTERED_MERCHANT_WALLET
+    };
   }
 
   /**
-   * Write a single memory record (Append-Only)
+   * Write a single memory record (Append-Only) using current active Delegate Key
    */
   public memwal_remember(
     customerName: string,
     customerPhone: string,
     memoryContent: string,
-    category: WalrusMemoryRecord['category'] = 'preference'
+    category: WalrusMemoryRecord['category'] = 'preference',
+    delegateKeyOverride?: string
   ): WalrusMemoryRecord {
     // Identity rule verification
     const identityPrefix = `${customerName} (${customerPhone}):`;
@@ -145,6 +231,8 @@ export class MemWalEngine {
     if (!formattedText.startsWith(identityPrefix)) {
       formattedText = `${identityPrefix} ${formattedText}`;
     }
+
+    const usedKey = delegateKeyOverride || this.activeDelegateKey.key;
 
     const record: WalrusMemoryRecord = {
       id: `mem_wal_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
@@ -154,6 +242,8 @@ export class MemWalEngine {
       memoryText: formattedText,
       createdAt: new Date().toISOString(),
       blobId: `walrus_blob_${Math.random().toString(36).substring(2, 10)}`,
+      delegateKeyUsed: usedKey,
+      merchantWallet: REGISTERED_MERCHANT_WALLET
     };
 
     this.memories.unshift(record);
@@ -213,7 +303,7 @@ export class MemWalEngine {
   }
 
   /**
-   * Analyze pasted WhatsApp transcript and extract memories
+   * Analyze pasted WhatsApp transcript and extract memories (Attributed to Noter/Web App delegate keys)
    */
   public memwal_analyze(transcript: string, defaultName: string = 'Customer', defaultPhone: string = '+2348000000000'): AnalyzeResult {
     const extracted: WalrusMemoryRecord[] = [];
@@ -231,19 +321,20 @@ export class MemWalEngine {
       detectedName = nameMatch[0].charAt(0).toUpperCase() + nameMatch[0].slice(1);
     }
 
-    // Detect size / preference
+    // Detect size / preference (Attributed to Noter Agent)
     const sizeMatch = transcript.match(/\b(?:size\s*(\d{2})|size\s*(small|medium|large|xl|xxl))\b/i);
     if (sizeMatch) {
       const mem = this.memwal_remember(
         detectedName,
         detectedPhone,
         `Prefers ${sizeMatch[0]}. Recorded from transcript exchange.`,
-        'preference'
+        'preference',
+        WALRUS_DELEGATE_KEYS.noter1.key
       );
       extracted.push(mem);
     }
 
-    // Detect delivery address
+    // Detect delivery address (Attributed to Noter Agent)
     if (transcript.toLowerCase().includes('deliver') || transcript.toLowerCase().includes('address') || transcript.toLowerCase().includes('street') || transcript.toLowerCase().includes('lagos')) {
       const addressLine = lines.find(l => l.toLowerCase().includes('deliver') || l.toLowerCase().includes('street') || l.toLowerCase().includes('road') || l.toLowerCase().includes('ikeja') || l.toLowerCase().includes('surulere') || l.toLowerCase().includes('lekki'));
       if (addressLine) {
@@ -251,16 +342,16 @@ export class MemWalEngine {
           detectedName,
           detectedPhone,
           `Delivery address specified: ${addressLine.trim()}`,
-          'address'
+          'address',
+          WALRUS_DELEGATE_KEYS.noter1.key
         );
         extracted.push(mem);
       }
     }
 
-    // Detect financial debt / balance updates
+    // Detect financial debt / balance updates (Attributed to Researcher Agent)
     let detectedDebt = 0;
     const debtMatch = transcript.match(/(?:owe|owing|balance|pay rest|pay remaining|deposit|balance of)\s*₦?\s*([0-9,]+)/i);
-    const totalMatch = transcript.match(/(?:total|price|cost|for)\s*₦?\s*([0-9,]+)/i);
 
     if (debtMatch) {
       const amountStr = debtMatch[1].replace(/,/g, '');
@@ -272,20 +363,22 @@ export class MemWalEngine {
           detectedName,
           detectedPhone,
           `owes ₦${debtVal.toLocaleString()} as of ${dateStr}. Recorded from payment deposit conversation.`,
-          'debt_ledger'
+          'debt_ledger',
+          WALRUS_DELEGATE_KEYS.researcher.key
         );
         extracted.push(mem);
       }
     }
 
-    // Detect purchase item
+    // Detect purchase item (Attributed to Web App Key)
     const orderMatch = transcript.match(/(?:order|bought|want|buying|slide|shirt|watch|bag|shoe|dress|wig)\s*(?:for\s*₦?([0-9,]+))?/i);
     if (orderMatch && !debtMatch) {
       const mem = this.memwal_remember(
         detectedName,
         detectedPhone,
         `Purchased ${orderMatch[0]} on ${new Date().toISOString().split('T')[0]}.`,
-        'order_history'
+        'order_history',
+        WALRUS_DELEGATE_KEYS.webApp.key
       );
       extracted.push(mem);
     }
@@ -293,7 +386,8 @@ export class MemWalEngine {
     return {
       extractedMemories: extracted,
       summary: `Extracted ${extracted.length} structured memories for ${detectedName} (${detectedPhone}).`,
-      detectedDebtKobo: detectedDebt * 100
+      detectedDebtKobo: detectedDebt * 100,
+      delegateKeyUsed: this.activeDelegateKey.key
     };
   }
 
