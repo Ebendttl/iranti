@@ -124,7 +124,7 @@ module iranti_ledger::ledger {
         ledger: &mut MerchantLedger,
         name_bytes: vector<u8>,
         phone_bytes: vector<u8>,
-        _ctx: &mut TxContext
+        ctx: &mut TxContext
     ) {
         let ledger_id = object::id(ledger);
         assert!(cap.ledger_id == ledger_id, ENotOwner);
