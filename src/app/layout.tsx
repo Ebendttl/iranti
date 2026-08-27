@@ -7,6 +7,11 @@ import Providers from './providers';
 export const metadata: Metadata = {
   title: 'Ìrántí — Customer Memory Agent for WhatsApp Sellers',
   description: 'AI sales assistant built on Walrus Memory (MemWal) and Sui Blockchain for Lagos WhatsApp sellers.',
+  icons: {
+    icon: '/icon.png',
+    shortcut: '/favicon.ico',
+    apple: '/icon.png',
+  },
 };
 
 export default function RootLayout({
