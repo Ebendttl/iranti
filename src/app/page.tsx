@@ -315,9 +315,11 @@ export default function HomePage() {
           
           {/* Logo & Brand Mark */}
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20 border border-amber-400/30">
-              <Brain className="w-6 h-6 text-black" />
-            </div>
+            <img
+              src="/icon.png"
+              alt="Ìrántí Logo"
+              className="w-10 h-10 rounded-xl shadow-lg shadow-amber-500/20 border border-amber-400/30 object-cover"
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <span className="text-xl font-extrabold tracking-tight text-white font-outfit">
@@ -810,9 +812,11 @@ export default function HomePage() {
               ) : (
                 /* Initial Empty State */
                 <div className="glass-panel rounded-2xl p-12 text-center space-y-4 flex flex-col items-center justify-center min-h-[480px]">
-                  <div className="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shadow-lg shadow-amber-500/10">
-                    <Brain className="w-8 h-8 text-amber-400" />
-                  </div>
+                  <img
+                    src="/icon.png"
+                    alt="Ìrántí Logo"
+                    className="w-16 h-16 rounded-2xl shadow-xl shadow-amber-500/20 border border-amber-400/30 object-cover"
+                  />
                   <div className="max-w-md space-y-2">
                     <h3 className="text-lg font-bold text-gray-100">Ready to Process Customer Interaction</h3>
                     <p className="text-xs text-gray-400 leading-relaxed">
