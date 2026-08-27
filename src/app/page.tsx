@@ -183,31 +183,39 @@ export default function HomePage() {
     try {
       const tx = suiLedgerService.buildPublishPackageTx();
       signAndExecute(
-        { transaction: tx as any },
+        {
+          transaction: tx as any,
+          options: {
+            showObjectChanges: true,
+            showEffects: true,
+          }
+        },
         {
           onSuccess: (result: any) => {
             setPublishTxHash(result.digest);
-            // Extract Package ID from transaction response or objectChanges
+            let pkgId = null;
             if (result.objectChanges) {
               const published = result.objectChanges.find((c: any) => c.type === 'published');
               if (published && published.packageId) {
-                setPublishedPackageId(published.packageId);
+                pkgId = published.packageId;
               }
             }
-            if (!publishedPackageId) {
-              // Fallback to digest reference or generated object ID
-              setPublishedPackageId(result.digest);
+            if (!pkgId) {
+              pkgId = result.digest;
             }
+            setPublishedPackageId(pkgId);
             setIsPublishing(false);
           },
-          onError: (err) => {
+          onError: (err: any) => {
             console.error('Publish Package Error:', err);
+            alert(`Publish Error: ${err.message || JSON.stringify(err)}`);
             setIsPublishing(false);
           }
         }
       );
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
+      alert(`Publish Exception: ${err.message || JSON.stringify(err)}`);
       setIsPublishing(false);
     }
   };
